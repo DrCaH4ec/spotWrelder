@@ -7,17 +7,17 @@
 #include <stdbool.h>
 
 typedef struct {
-    volatile uint8_t *dioDDR;
-    volatile uint8_t *dioPORT;
-    uint8_t dioBIT;
+    volatile uint8_t *ddr;
+    volatile uint8_t *port;
+    uint8_t bit;
     bool activeState; // true for active HIGH, false for active LOW
 } beeperCtxt_t;
 
 #define BEEPER_CTXT_DECLARE(name, beeperPort, beeperBit, beeperActiveState) \
 beeperCtxt_t name = { \
-    .dioPORT = &(beeperPort), \
-    .dioDDR = &(beeperPort) - 1, \
-    .dioBIT = (beeperBit), \
+    .port = &(beeperPort), \
+    .ddr = &(beeperPort) - 1, \
+    .bit = (beeperBit), \
     .activeState = (beeperActiveState == 1) ? true : false \
 }
 

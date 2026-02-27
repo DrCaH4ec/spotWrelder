@@ -8,19 +8,19 @@ static void _setState(beeperCtxt_t *me, bool state) {
         // Set to active state
         if (me->activeState) {
             // Active HIGH
-            *(me->dioPORT) |= (1 << me->dioBIT);
+            *(me->port) |= (1 << me->bit);
         } else {
             // Active LOW
-            *(me->dioPORT) &= ~(1 << me->dioBIT);
+            *(me->port) &= ~(1 << me->bit);
         }
     } else {
         // Set to inactive state
         if (me->activeState) {
             // Active HIGH
-            *(me->dioPORT) &= ~(1 << me->dioBIT);
+            *(me->port) &= ~(1 << me->bit);
         } else {
             // Active LOW
-            *(me->dioPORT) |= (1 << me->dioBIT);
+            *(me->port) |= (1 << me->bit);
         }
     }
 }
@@ -30,7 +30,7 @@ static void _setState(beeperCtxt_t *me, bool state) {
 /*============================================================================*/
 void beeper_init(beeperCtxt_t *me) {
     // Set the beeper pin as output
-    *(me->dioDDR) |= (1 << me->dioBIT);
+    *(me->ddr) |= (1 << me->bit);
 
     // Set the beeper to inactive state
     _setState(me, false);
