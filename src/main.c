@@ -11,16 +11,16 @@ int main(void) {
     DDRB |= (1 << DDB5);
 
     lcd_init(&lcd);
-    lcd_backlight(1);
+    lcd_backlight(&lcd, 1);
 
     lcd_gotoxy(&lcd, 6, 0);
-    lcd_puts("Ushan");
+    lcd_puts(&lcd, "UshanUshanUshanUshanUshan");
     lcd_gotoxy(&lcd, 4, 1);
-    lcd_puts("Ushan");
+    lcd_puts(&lcd, "Ushan");
     lcd_gotoxy(&lcd, 2, 2);
-    lcd_puts("Ushan");
+    lcd_puts(&lcd, "Ushan");
     lcd_gotoxy(&lcd, 0, 3);
-    lcd_puts("Ushan");
+    lcd_puts(&lcd, "Ushanchick");
 
 
     while (1) {

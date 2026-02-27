@@ -1,9 +1,47 @@
 #include "lcdTwi_lib.h"
 
-static uint8_t lcd_reg = 0x00;
-
 #define LOW 0
 #define HIGH 1
+
+//-----------------------------------------------------------------------------
+#define ON 		1
+#define OFF 	0
+//-----------------------------------------------------------------------------
+#define CLEAR_DISPLAY 				(1<<0)
+#define RETURN_HOME 				(1<<1)
+#define ENTRY_MODE_SET				(1<<2)
+#define DISPLAY_ON_OFF_CONTROL		(1<<3)
+#define CURSOR_OR_DISPLAY_SHIFT		(1<<4)
+#define FUNCTION_SET				(1<<5)
+#define SET_CGRAM_ADDRES			(1<<6)
+#define SET_DDRAM_ADDRES			(1<<7)
+
+// Entry mode set
+#define SH 							(1<<0)
+#define I_D							(1<<1)
+
+// Display ON/OFF control
+#define B 							(1<<0)
+#define C 							(1<<1)
+#define D 							(1<<2)
+
+// Cursor or Display Shift
+#define R_L							(1<<2)
+#define S_C 						(1<<3)
+
+// Function set
+#define F 							(1<<2)
+#define N							(1<<3)
+#define DL 							(1<<4)
+
+#define LCD_RS 						(1<<0)
+#define LCD_RW						(1<<1)
+#define LCD_E  						(1<<2)
+#define LCD_LED						(1<<3)
+#define LCD_D4 						(1<<4)
+#define LCD_D5						(1<<5)
+#define LCD_D6						(1<<6)
+#define LCD_D7						(1<<7)
 
 #define LCD_DELAY_US(x) do { \
 		_delay_us(x); \
@@ -17,16 +55,16 @@ static uint8_t lcd_reg = 0x00;
 //#####################---INTERNAL FUNCTIONS---################################
 //#############################################################################
 
-static void pulseEn()
+static void pulseEn(twiLcdCtxt_t *me)
 {
-	lcd_reg &= ~LCD_E;
-    twi_write_data(ADDR, lcd_reg, 0x00, 0);
+	me->lcd_reg &= ~LCD_E;
+    twi_write_data(me->addr, me->lcd_reg, 0x00, 0);
 	LCD_DELAY_US(10);
-	lcd_reg |= LCD_E;
-  	twi_write_data(ADDR, lcd_reg, 0x00, 0);
+	me->lcd_reg |= LCD_E;
+  	twi_write_data(me->addr, me->lcd_reg, 0x00, 0);
 	LCD_DELAY_US(10);		
-	lcd_reg &= ~LCD_E;
-    twi_write_data(ADDR, lcd_reg, 0x00, 0);
+	me->lcd_reg &= ~LCD_E;
+    twi_write_data(me->addr, me->lcd_reg, 0x00, 0);
 	LCD_DELAY_US(100);
 }
 
@@ -34,52 +72,47 @@ static void pulseEn()
 
 // part=1 -> high
 // part=0 -> low
-static void sendHalfByte(uint8_t data, bool part)
+static void sendHalfByte(twiLcdCtxt_t *me, uint8_t data, bool part)
 {
 
-	lcd_reg &= ~(LCD_D4 | LCD_D5 | LCD_D6 | LCD_D7);
+	me->lcd_reg &= ~(LCD_D4 | LCD_D5 | LCD_D6 | LCD_D7);
 
 	if(part){
-
-		lcd_reg = data&(1<<4) ? lcd_reg|LCD_D4 : lcd_reg;
-		lcd_reg = data&(1<<5) ? lcd_reg|LCD_D5 : lcd_reg;
-		lcd_reg = data&(1<<6) ? lcd_reg|LCD_D6 : lcd_reg;
-		lcd_reg = data&(1<<7) ? lcd_reg|LCD_D7 : lcd_reg;
-
-
+		me->lcd_reg = data&(1<<4) ? me->lcd_reg|LCD_D4 : me->lcd_reg;
+		me->lcd_reg = data&(1<<5) ? me->lcd_reg|LCD_D5 : me->lcd_reg;
+		me->lcd_reg = data&(1<<6) ? me->lcd_reg|LCD_D6 : me->lcd_reg;
+		me->lcd_reg = data&(1<<7) ? me->lcd_reg|LCD_D7 : me->lcd_reg;
 	}
 	else{
-
-		lcd_reg = data&(1<<0) ? lcd_reg|LCD_D4 : lcd_reg;
-		lcd_reg = data&(1<<1) ? lcd_reg|LCD_D5 : lcd_reg;
-		lcd_reg = data&(1<<2) ? lcd_reg|LCD_D6 : lcd_reg;
-		lcd_reg = data&(1<<3) ? lcd_reg|LCD_D7 : lcd_reg;
-
+		me->lcd_reg = data&(1<<0) ? me->lcd_reg|LCD_D4 : me->lcd_reg;
+		me->lcd_reg = data&(1<<1) ? me->lcd_reg|LCD_D5 : me->lcd_reg;
+		me->lcd_reg = data&(1<<2) ? me->lcd_reg|LCD_D6 : me->lcd_reg;
+		me->lcd_reg = data&(1<<3) ? me->lcd_reg|LCD_D7 : me->lcd_reg;
 	}
 
-	pulseEn();
+	pulseEn(me);
 }
 
 //-----------------------------------------------------------------------------
 
-static void sendInst(uint8_t data)
+static void sendInst(twiLcdCtxt_t *me, uint8_t data)
 {
-	lcd_reg &= ~LCD_RS;
+	me->lcd_reg &= ~LCD_RS;
 
-	sendHalfByte(data, HIGH);
-	sendHalfByte(data, LOW);	
+	sendHalfByte(me, data, HIGH);
+	sendHalfByte(me, data, LOW);
 }
 
 //-----------------------------------------------------------------------------
 
-static void sendData(uint8_t data)
+static void sendData(twiLcdCtxt_t *me, uint8_t data)
 {
-	lcd_reg |= LCD_RS;
+	me->lcd_reg |= LCD_RS;
 
 	LCD_DELAY_US(1);
 
-	sendHalfByte(data, HIGH);
-	sendHalfByte(data, LOW);
+	sendHalfByte(me, data, HIGH);
+	sendHalfByte(me, data, LOW);
 
 	LCD_DELAY_US(50);
 }
@@ -88,64 +121,64 @@ static void sendData(uint8_t data)
 //#####################---EXTERNAL FUNCTIONS---################################
 //#############################################################################
 
-void lcd_backlight(bool mode)
+void lcd_backlight(twiLcdCtxt_t *me, bool mode)
 {
-	lcd_reg = mode ? lcd_reg|LCD_LED : lcd_reg&(~LCD_LED);
+	me->lcd_reg = mode ? me->lcd_reg|LCD_LED : me->lcd_reg&(~LCD_LED);
 
-	twi_write_data(ADDR, lcd_reg, 0x00, 0);
+	twi_write_data(me->addr, me->lcd_reg, 0x00, 0);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_clear()
+void lcd_clear(twiLcdCtxt_t *me)
 {
-	sendInst(CLEAR_DISPLAY);
+	sendInst(me, CLEAR_DISPLAY);
 	LCD_DELAY_MS(2);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_home()
+void lcd_home(twiLcdCtxt_t *me)
 {
-	sendInst(RETURN_HOME);
+	sendInst(me, RETURN_HOME);
 	LCD_DELAY_MS(2);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_init(twiLcdCtxt_t *lcd)
+void lcd_init(twiLcdCtxt_t *me)
 {
 	uint8_t tmp = 0x00;
 
 	LCD_DELAY_MS(50);
 
 	tmp = FUNCTION_SET | DL;
-	sendHalfByte(tmp, HIGH);
+	sendHalfByte(me, tmp, HIGH);
 	LCD_DELAY_MS(5);
-	sendHalfByte(tmp, HIGH);
+	sendHalfByte(me, tmp, HIGH);
 	LCD_DELAY_US(150);
-	sendHalfByte(tmp, HIGH);
+	sendHalfByte(me, tmp, HIGH);
 	LCD_DELAY_US(50);
 
 	tmp = 0x00;
 	tmp |= FUNCTION_SET;
-	sendHalfByte(tmp, HIGH);
+	sendHalfByte(me, tmp, HIGH);
 
 	//2 lines mode set
 	//5x8 dots
-	tmp = lcd->lines > 1 ? (tmp | N) : tmp;
-	sendInst(tmp);
-	sendInst(tmp);
+	tmp = me->lines > 1 ? (tmp | N) : tmp;
+	sendInst(me, tmp);
+	sendInst(me, tmp);
 
 	tmp = 0x00;
 	tmp = DISPLAY_ON_OFF_CONTROL | D;
-	sendInst(tmp);
+	sendInst(me, tmp);
 
 	tmp = 0x00;
 	tmp = ENTRY_MODE_SET | I_D;
-	sendInst(tmp);
+	sendInst(me, tmp);
 
-	lcd_clear();	
+	lcd_clear(me);	
 }
 
 //-----------------------------------------------------------------------------
@@ -185,88 +218,86 @@ void lcd_gotoxy(twiLcdCtxt_t *me, uint8_t x, uint8_t y)
 
 	tmp += x;
 
-	sendInst(tmp);
+	sendInst(me, tmp);
 	LCD_DELAY_US(100);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_puts(char data[])
+void lcd_puts(twiLcdCtxt_t *me, char data[])
 {
 	uint8_t i = 0;
 
 	while(data[i] != '\0' && i < 16){
-		sendData(data[i]);
+		sendData(me, data[i]);
 		i++;
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_put_Char(char data)
+void lcd_putChar(twiLcdCtxt_t *me, char data)
 {
-	sendData(data);
+	sendData(me, data);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_cursor(bool mode)
+void lcd_cursor(twiLcdCtxt_t *me, bool mode)
 {
 	uint8_t tmp = DISPLAY_ON_OFF_CONTROL | D;
 
 	tmp = mode ? (tmp | C) : tmp;
 
-	sendInst(tmp);
+	sendInst(me, tmp);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_cursor_blink(bool mode)
+void lcd_cursorBlink(twiLcdCtxt_t *me, bool mode)
 {
 	uint8_t tmp = DISPLAY_ON_OFF_CONTROL | D;
 
 	tmp = mode ? (tmp | B) : tmp;
 
-	sendInst(tmp);
+	sendInst(me, tmp);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_display(bool mode)
+void lcd_display(twiLcdCtxt_t *me, bool mode)
 {
 	uint8_t tmp = DISPLAY_ON_OFF_CONTROL;
 
 	tmp = mode ? (tmp | D) : tmp;
 
-	sendInst(tmp);
+	sendInst(me, tmp);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_shift_display_left()
+void lcd_shiftDispLeft(twiLcdCtxt_t *me)
 {
 	uint8_t tmp = CURSOR_OR_DISPLAY_SHIFT | S_C;
 
-	sendInst(tmp);
+	sendInst(me, tmp);
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_shift_display_right()
+void lcd_shiftDispRight(twiLcdCtxt_t *me)
 {
-	uint8_t tmp = CURSOR_OR_DISPLAY_SHIFT | S_C | R_L;
-
-	sendInst(tmp);
+	sendInst(me, (CURSOR_OR_DISPLAY_SHIFT | S_C | R_L));
 }
 
 //-----------------------------------------------------------------------------
 
-void lcd_create_char(uint8_t data[], uint8_t location)
+void lcd_createChar(twiLcdCtxt_t *me, uint8_t data[], uint8_t location)
 {
 	uint8_t tmp = SET_CGRAM_ADDRES | (location<<3);
-	sendInst(tmp);
+	sendInst(me, tmp);
 
 	uint8_t i;
 	for(i = 0; i < 8; i++)
-		sendData(data[i]);
+		sendData(me, data[i]);
 }
