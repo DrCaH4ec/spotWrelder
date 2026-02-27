@@ -6,6 +6,10 @@
 
 TWI_LCD_CTXT_DECLARE(lcd, 0x27, 20, 4);
 
+#include "beeper_lib.h"
+BEEPER_CTXT_DECLARE(beeper, PORTD, 7, 1);
+
+
 int main(void) {
     // Set pin 5 of PORTB as output
     DDRB |= (1 << DDB5);
