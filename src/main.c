@@ -11,8 +11,7 @@ BEEPER_CTXT_DECLARE(beeper, PORTD, 7, 1);
 
 
 int main(void) {
-    // Set pin 5 of PORTB as output
-    DDRB |= (1 << DDB5);
+    twi_init(TWI_PRESC_4, 18);
 
     lcd_init(&lcd);
     lcd_backlight(&lcd, 1);
