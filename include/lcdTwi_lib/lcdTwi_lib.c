@@ -185,7 +185,7 @@ void lcd_init(twiLcdCtxt_t *me)
 
 void lcd_gotoxy(twiLcdCtxt_t *me, uint8_t x, uint8_t y)
 {
-	if (y >= me->lines || x >= me->rows)
+	if (y >= me->lines || x >= me->cols)
 		return;
 
 	uint8_t tmp = SET_DDRAM_ADDRES;
@@ -228,7 +228,7 @@ void lcd_puts(twiLcdCtxt_t *me, char data[])
 {
 	uint8_t i = 0;
 
-	while(data[i] != '\0' && i < 16){
+	while(data[i] != '\0' && i < me->cols){
 		sendData(me, data[i]);
 		i++;
 	}

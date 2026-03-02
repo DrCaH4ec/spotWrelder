@@ -18,15 +18,15 @@
 typedef struct {
     uint8_t addr;
     uint8_t lines;
-    uint8_t rows;
+    uint8_t cols;
     uint8_t lcd_reg;
 } twiLcdCtxt_t;
 
-#define TWI_LCD_CTXT_DECLARE(name, lcdAddr, lcdRows, lcdLines) \
+#define TWI_LCD_CTXT_DECLARE(name, lcdAddr, lcdCols, lcdLines) \
 twiLcdCtxt_t name = { \
     .addr = lcdAddr, \
     .lines = lcdLines, \
-    .rows = lcdRows, \
+    .cols = lcdCols, \
     .lcd_reg = 0x00 \
 }
 
