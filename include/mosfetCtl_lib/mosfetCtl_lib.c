@@ -33,7 +33,6 @@ ISR(TIMER1_COMPA_vect) {
         tmpMe->pulseDurCnt = 0;
         // Deactivate MOSFET when timer compare match occurs
         _setState(tmpMe, false);
-
         tmpMe = NULL; // Clear the temporary context pointer
     } else {
         return; // Skip deactivation until we've reached the desired count
@@ -75,11 +74,14 @@ void mosfet_ctl_do_pulse(mosfetCtlCtxt_t *me)
         return; // Invalid context, do nothing
     }
 
+    if (tmpMe != NULL) return; // A pulse is already in progress, ignore this request
+
     tmpMe = me; // Store the context for use in the ISR
     me->pulseDurCnt = 0; // Reset pulse duration counter
 
     _setState(me, true); // Activate MOSFET
     TCNT1 = 0; // Reset timer count
+    TIFR1 = (1 << ICF1); // Clear any pending Timer1 input capture interrupt flag
     TIMSK1 |= (1 << OCIE1A); // IRQ enable
 }
 
